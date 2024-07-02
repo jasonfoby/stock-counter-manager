@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>재고 카운팅 앱</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap');
+
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #f5f5f5;
+            --text-color: #333;
+            --error-color: #e74c3c;
+            --success-color: #2ecc71;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            font-weight: 500;
+        }
+
+        .card {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            width: 100%; /* 카드의 폭을 100%로 설정 */
+            box-sizing: border-box; /* 패딩을 포함한 전체 폭 계산 */
+        }
+
+        .card:hover {
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .input-container {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        #barcodeInput {
+            width: 100%; /* 입력 필드의 폭을 100%로 설정 */
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-sizing: border-box; /* 패딩을 포함한 전체 폭 계산 */
+        }
+
+        #barcodeInput:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        #loginButton, #logoutButton {
+            background-color: var(--primary-color);
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        #saveButton, #loadButton {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .table-container {
+            width: 100%; /* 테이블 컨테이너의 폭을 100%로 설정 */
+            overflow-x: auto; /* 필요시 가로 스크롤 추가 */
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .quantity-input {
+            width: 60px;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .delete-btn {
+            background-color: var(--error-color);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            background-color: #c0392b;
+        }
+
+        .popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .popup-overlay.active {
+            opacity: 1;
+        }
+
+        .popup-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 80%;
+            max-height: 80%;
+            overflow-y: auto;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .popup-overlay.active .popup-content {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .popup-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #aaa;
+            transition: color 0.3s ease;
+        }
+
+        .popup-close:hover {
+            color: var(--text-color);
+        }
+
+        .saved-list-item {
+            cursor: pointer;
+            padding: 12px;
+            margin: 8px 0;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .saved-list-item:hover {
+            background-color: #e0e0e0;
+            transform: translateX(5px);
+        }
+
+        .login-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        #userEmail {
+            font-size: 14px;
+            color: #666;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+
+            table {
+                font-size: 14px;
+            }
+
+            .quantity-input {
+                width: 40px;
+            }
+
+            .delete-btn {
+                padding: 4px 8px;
+                font-size: 12px;
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="fade-in">재고 카운팅 앱</h1>
+        <div class="card fade-in">
+            <div class="login-container">
+                <button id="loginButton">로그인</button>
+                <button id="logoutButton" style="display: none;">로그아웃</button>
+                <span id="userEmail"></span>
+            </div>
+            <div class="button-container">
+                <button id="saveButton" disabled>저장하기</button>
+                <button id="loadButton" disabled>불러오기</button>
+            </div>
+            <div class="input-container">
+                <input type="text" id="barcodeInput" placeholder="바코드를 스캔하거나 입력하세요" autofocus disabled>
+            </div>
+        </div>
+        <div class="card fade-in">
+            <table id="inventoryTable">
+                <thead>
+                    <tr>
+                        <th>상품 코드</th>
+                        <th>수량</th>
+                        <th>작업</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="popupOverlay" class="popup-overlay">
+        <div class="popup-content">
+            <span class="popup-close">&times;</span>
+            <h2>저장된 목록</h2>
+            <div id="savedListsContainer"></div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+
+    <script>
+        // Firebase 설정
+        const firebaseConfig = {
+            apiKey: "AIzaSyDuqJRuzCyvuG_0SOPW6abVjUzQdelOLlo",
+            authDomain: "stock-counter-manager.firebaseapp.com",
+            projectId: "stock-counter-manager",
+            storageBucket: "stock-counter-manager.appspot.com",
+            messagingSenderId: "978871344594",
+            appId: "1:978871344594:web:1c31ea25ecb8f814d63c0b",
+            measurementId: "G-ZQM2LFCJPS"
+        };
+
+        // Firebase 초기화
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        const barcodeInput = document.getElementById('barcodeInput');
+        const inventoryTable = document.getElementById('inventoryTable');
+        const saveButton = document.getElementById('saveButton');
+        const loadButton = document.getElementById('loadButton');
+        const popupOverlay = document.getElementById('popupOverlay');
+        const popupClose = document.querySelector('.popup-close');
+        const savedListsContainer = document.getElementById('savedListsContainer');
+        const loginButton = document.getElementById('loginButton');
+        const logoutButton = document.getElementById('logoutButton');
+        const userEmailSpan = document.getElementById('userEmail');
+        let inventory = {};
+        let currentUser = null;
+
+        // 애니메이션 효과를 위한 함수
+        function animateElement(element) {
+            element.classList.add('fade-in');
+            element.addEventListener('animationend', () => {
+                element.classList.remove('fade-in');
+            }, { once: true });
+        }
+
+        // 팝업 오버레이 표시 함수 수정
+        function showPopupOverlay() {
+            popupOverlay.style.display = 'block';
+            setTimeout(() => {
+                popupOverlay.classList.add('active');
+            }, 10);
+        }
+
+        // 팝업 오버레이 숨기기 함수 수정
+        function hidePopupOverlay() {
+            popupOverlay.classList.remove('active');
+            setTimeout(() => {
+                popupOverlay.style.display = 'none';
+            }, 300);
+        }
+
+        // 테이블 업데이트 함수 수정
+        function updateTable() {
+            const tbody = inventoryTable.querySelector('tbody');
+            tbody.innerHTML = '';
+            
+            const sortedInventory = Object.entries(inventory).sort((a, b) => a[0].localeCompare(b[0]));
+
+            sortedInventory.forEach(([code, quantity]) => {
+                const row = tbody.insertRow();
+                row.classList.add('fade-in');
+                
+                row.insertCell(0).textContent = code;
+                
+                const quantityCell = row.insertCell(1);
+                const quantityInput = document.createElement('input');
+                quantityInput.type = 'number';
+                quantityInput.value = quantity;
+                quantityInput.min = 1;
+                quantityInput.className = 'quantity-input';
+                quantityInput.addEventListener('change', function() {
+                    inventory[code] = parseInt(this.value) || 1;
+                    updateTable();
+                });
+                quantityCell.appendChild(quantityInput);
+
+                const actionCell = row.insertCell(2);
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = '삭제';
+                deleteButton.className = 'delete-btn';
+                deleteButton.addEventListener('click', function() {
+                    delete inventory[code];
+                    updateTable();
+                });
+                actionCell.appendChild(deleteButton);
+            });
+        }
+
+        // 로그인 상태 감지 함수 수정
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                console.log('로그인된 사용자:', user);
+                currentUser = user;
+                loginButton.style.display = 'none';
+                logoutButton.style.display = 'block';
+                userEmailSpan.textContent = user.email;
+                userEmailSpan.style.display = 'block';
+                enableApp();
+                animateElement(logoutButton);
+                animateElement(userEmailSpan);
+            } else {
+                console.log('로그아웃 상태');
+                currentUser = null;
+                loginButton.style.display = 'block';
+                logoutButton.style.display = 'none';
+                userEmailSpan.textContent = '';
+                userEmailSpan.style.display = 'none';
+                disableApp();
+                animateElement(loginButton);
+            }
+        });
+
+        // 로그인 버튼 이벤트
+        loginButton.addEventListener('click', () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider)
+        .then((result) => {
+            console.log('로그인 성공:', result.user);
+        })
+        .catch((error) => {
+            console.error('로그인 실패:', error);
+            alert('로그인에 실패했습니다. 오류: ' + error.message);
+        });
+});
+
+        // 로그아웃 버튼 이벤트
+        logoutButton.addEventListener('click', () => {
+            auth.signOut().then(() => {
+                alert('로그아웃되었습니다.');
+            }).catch((error) => {
+                console.error('로그아웃 실패:', error);
+            });
+        });
+
+        function enableApp() {
+            barcodeInput.disabled = false;
+            saveButton.disabled = false;
+            loadButton.disabled = false;
+        }
+
+        function disableApp() {
+            barcodeInput.disabled = true;
+            saveButton.disabled = true;
+            loadButton.disabled = true;
+            inventory = {};
+            updateTable();
+        }
+
+        barcodeInput.addEventListener('keyup', function(event) {
+            if (event.key === 'Enter') {
+                const barcode = this.value.trim();
+                if (barcode !== '') {
+                    addToInventory(barcode);
+                    this.value = '';
+                }
+            }
+        });
+
+        saveButton.addEventListener('click', saveInventory);
+        loadButton.addEventListener('click', showSavedLists);
+        popupClose.addEventListener('click', hidePopupOverlay);
+
+        function addToInventory(barcode) {
+            inventory[barcode] = (inventory[barcode] || 0) + 1;
+            updateTable();
+        }
+
+        function updateTable() {
+            const tbody = inventoryTable.querySelector('tbody');
+            tbody.innerHTML = '';
+            
+            const sortedInventory = Object.entries(inventory).sort((a, b) => a[0].localeCompare(b[0]));
+
+            sortedInventory.forEach(([code, quantity]) => {
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = code;
+                
+                const quantityCell = row.insertCell(1);
+                const quantityInput = document.createElement('input');
+                quantityInput.type = 'number';
+                quantityInput.value = quantity;
+                quantityInput.min = 1;
+                quantityInput.className = 'quantity-input';
+                quantityInput.addEventListener('change', function() {
+                    inventory[code] = parseInt(this.value) || 1;
+                    updateTable();
+                });
+                quantityCell.appendChild(quantityInput);
+
+                const actionCell = row.insertCell(2);
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = '삭제';
+                deleteButton.className = 'delete-btn';
+                deleteButton.addEventListener('click', function() {
+                    delete inventory[code];
+                    updateTable();
+                });
+                actionCell.appendChild(deleteButton);
+            });
+        }
+
+        function saveInventory() {
+            if (!currentUser) {
+                alert('로그인이 필요합니다.');
+                return;
+            }
+            const listName = prompt('저장할 목록의 이름을 입력하세요:');
+            if (listName) {
+                db.collection('users').doc(currentUser.uid).collection('inventoryLists').doc(listName).set({
+                    inventory: inventory,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                })
+                .then(() => {
+                    alert('목록이 성공적으로 저장되었습니다.');
+                })
+                .catch((error) => {
+                    console.error('저장 중 오류 발생:', error);
+                    alert('목록 저장에 실패했습니다.');
+                });
+            }
+        }
+
+        function showSavedLists() {
+            if (!currentUser) {
+                alert('로그인이 필요합니다.');
+                return;
+            }
+            db.collection('users').doc(currentUser.uid).collection('inventoryLists').orderBy('timestamp', 'desc').get()
+            .then((querySnapshot) => {
+                savedListsContainer.innerHTML = '';
+                querySnapshot.forEach((doc) => {
+                    const listItem = document.createElement('div');
+                    listItem.className = 'saved-list-item';
+                    listItem.textContent = doc.id;
+                    listItem.addEventListener('click', () => loadInventory(doc.id));
+                    savedListsContainer.appendChild(listItem);
+                    animateElement(listItem);
+                });
+                showPopupOverlay();
+            })
+            .catch((error) => {
+                console.error('목록 불러오기 중 오류 발생:', error);
+                alert('저장된 목록을 불러오는데 실패했습니다.');
+            });
+        }
+
+        function loadInventory(listName) {
+            if (!currentUser) {
+                alert('로그인이 필요합니다.');
+                return;
+            }
+            db.collection('users').doc(currentUser.uid).collection('inventoryLists').doc(listName).get()
+            .then((doc) => {
+                if (doc.exists) {
+                    inventory = doc.data().inventory;
+                    updateTable();
+                    hidePopupOverlay();
+                    alert('목록이 성공적으로 불러와졌습니다.');
+                } else {
+                    alert('해당 이름의 목록을 찾을 수 없습니다.');
+                }
+            })
+            .catch((error) => {
+                console.error('목록 불러오기 중 오류 발생:', error);
+                alert('목록을 불러오는데 실패했습니다.');
+            });
+        }
+
+        // 팝업 닫기 버튼 이벤트 수정
+        popupClose.addEventListener('click', hidePopupOverlay);
+
+        // 팝업 외부 클릭 시 닫기 수정
+        window.onclick = function(event) {
+            if (event.target == popupOverlay) {
+                hidePopupOverlay();
+            }
+        }
+
+        // 저장된 목록 표시 함수 수정
+        function showSavedLists() {
+            if (!currentUser) {
+                alert('로그인이 필요합니다.');
+                return;
+            }
+            db.collection('users').doc(currentUser.uid).collection('inventoryLists').orderBy('timestamp', 'desc').get()
+            .then((querySnapshot) => {
+                savedListsContainer.innerHTML = '';
+                querySnapshot.forEach((doc) => {
+                    const listItem = document.createElement('div');
+                    listItem.className = 'saved-list-item';
+                    listItem.textContent = doc.id;
+                    listItem.addEventListener('click', () => loadInventory(doc.id));
+                    savedListsContainer.appendChild(listItem);
+                    animateElement(listItem);
+                });
+                showPopupOverlay();
+            })
+            .catch((error) => {
+                console.error('목록 불러오기 중 오류 발생:', error);
+                alert('저장된 목록을 불러오는데 실패했습니다.');
+            });
+        }
+    </script>
+</body>
+</html>
